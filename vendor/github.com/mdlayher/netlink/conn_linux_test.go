@@ -344,8 +344,9 @@ func TestLinuxConnIntegration(t *testing.T) {
 	if want, got := HeaderTypeError, m.Header.Type; want != got {
 		t.Fatalf("unexpected header type:\n- want: %v\n-  got: %v", want, got)
 	}
-	if want, got := 0, int(m.Header.Flags); want != got {
-		t.Fatalf("unexpected header flags:\n- want: %v\n-  got: %v", want, got)
+	// Recent kernel versions (> 4.14) return a 256 here instead of a 0
+	if want, wantAlt, got := 0, 256, int(m.Header.Flags); want != got && wantAlt != got {
+		t.Fatalf("unexpected header flags:\n- want: %v or %v\n-  got: %v", want, wantAlt, got)
 	}
 
 	// Sequence number not checked because we assign one at random when
@@ -456,6 +457,107 @@ func TestLinuxConnJoinLeaveGroup(t *testing.T) {
 	if got := s.setSockopt; !reflect.DeepEqual(want, got) {
 		t.Fatalf("unexpected socket options:\n- want: %v\n-  got: %v",
 			want, got)
+	}
+}
+
+func TestLinuxConnSetOption(t *testing.T) {
+	const (
+		level  = unix.SOL_NETLINK
+		length = uint32(unsafe.Sizeof(uint32(0)))
+	)
+
+	tests := []struct {
+		name   string
+		option ConnOption
+		enable bool
+
+		want setSockopt
+		err  error
+	}{
+		{
+			name:   "invalid",
+			option: 999,
+			enable: true,
+			err:    unix.ENOPROTOOPT,
+		},
+		{
+			name:   "packet info on",
+			option: PacketInfo,
+			enable: true,
+			want: setSockopt{
+				name: unix.NETLINK_PKTINFO,
+				v:    1,
+			},
+		},
+		{
+			name:   "packet info off",
+			option: PacketInfo,
+			enable: false,
+			want: setSockopt{
+				name: unix.NETLINK_PKTINFO,
+				v:    0,
+			},
+		},
+		{
+			name:   "broadcast error",
+			option: BroadcastError,
+			enable: true,
+			want: setSockopt{
+				name: unix.NETLINK_BROADCAST_ERROR,
+				v:    1,
+			},
+		},
+		{
+			name:   "no ENOBUFS",
+			option: NoENOBUFS,
+			enable: true,
+			want: setSockopt{
+				name: unix.NETLINK_NO_ENOBUFS,
+				v:    1,
+			},
+		},
+		{
+			name:   "listen all NSID",
+			option: ListenAllNSID,
+			enable: true,
+			want: setSockopt{
+				name: unix.NETLINK_LISTEN_ALL_NSID,
+				v:    1,
+			},
+		},
+		{
+			name:   "cap acknowledge",
+			option: CapAcknowledge,
+			enable: true,
+			want: setSockopt{
+				name: unix.NETLINK_CAP_ACK,
+				v:    1,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, s := testLinuxConn(t, nil)
+
+			// Pre-populate fixed values.
+			tt.want.level = level
+			tt.want.l = length
+
+			if err := c.SetOption(tt.option, tt.enable); err != nil {
+				if want, got := tt.err, err; !reflect.DeepEqual(want, got) {
+					t.Fatalf("unexpected error:\n- want: %v\n-  got: %v",
+						want, got)
+				}
+
+				return
+			}
+
+			if want, got := []setSockopt{tt.want}, s.setSockopt; !reflect.DeepEqual(want, got) {
+				t.Fatalf("unexpected socket options:\n- want: %v\n-  got: %v",
+					want, got)
+			}
+		})
 	}
 }
 

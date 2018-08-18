@@ -6,34 +6,38 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Stats is the structure returned by Linux's taskstats interface.
-type Stats unix.Taskstats
+// parseCGroupStats parses a raw cgroupstats structure into a cleaner form.
+func parseCGroupStats(cs unix.CGroupStats) (*CGroupStats, error) {
+	// This conversion isn't really necessary for this type, but it allows us
+	// to export a structure that isn't defined in a platform-specific way.
+	stats := &CGroupStats{
+		Sleeping:        cs.Sleeping,
+		Running:         cs.Running,
+		Stopped:         cs.Stopped,
+		Uninterruptible: cs.Uninterruptible,
+		IOWait:          cs.Io_wait,
+	}
 
-// TODO(mdlayher): export cleaned up Stats type.
-type stats struct {
-	BeginTime       time.Time
-	ElapsedTime     time.Duration
-	UserCPUTime     time.Duration
-	SystemCPUTime   time.Duration
-	MinorPageFaults uint64
-	MajorPageFaults uint64
-
-	CPUCount uint64
-	CPUDelay time.Duration
+	return stats, nil
 }
 
 // parseStats parses a raw taskstats structure into a cleaner form.
-func parseStats(ts unix.Taskstats) (*stats, error) {
-	stats := &stats{
-		BeginTime:       time.Unix(int64(ts.Ac_btime), 0),
-		ElapsedTime:     microseconds(ts.Ac_etime),
-		UserCPUTime:     microseconds(ts.Ac_utime),
-		SystemCPUTime:   microseconds(ts.Ac_stime),
-		MinorPageFaults: ts.Ac_minflt,
-		MajorPageFaults: ts.Ac_majflt,
-
-		CPUCount: ts.Cpu_count,
-		CPUDelay: nanoseconds(ts.Cpu_delay_total),
+func parseStats(ts unix.Taskstats) (*Stats, error) {
+	stats := &Stats{
+		BeginTime:           time.Unix(int64(ts.Ac_btime), 0),
+		ElapsedTime:         microseconds(ts.Ac_etime),
+		UserCPUTime:         microseconds(ts.Ac_utime),
+		SystemCPUTime:       microseconds(ts.Ac_stime),
+		MinorPageFaults:     ts.Ac_minflt,
+		MajorPageFaults:     ts.Ac_majflt,
+		CPUDelayCount:       ts.Cpu_count,
+		CPUDelay:            nanoseconds(ts.Cpu_delay_total),
+		BlockIODelayCount:   ts.Blkio_count,
+		BlockIODelay:        nanoseconds(ts.Blkio_delay_total),
+		SwapInDelayCount:    ts.Swapin_count,
+		SwapInDelay:         nanoseconds(ts.Swapin_delay_total),
+		FreePagesDelayCount: ts.Freepages_count,
+		FreePagesDelay:      nanoseconds(ts.Freepages_delay_total),
 	}
 
 	return stats, nil

@@ -5,31 +5,34 @@
   branch = "master"
   name = "github.com/mdlayher/genetlink"
   packages = ["."]
-  revision = "76fecce4c787fb8eaa21a8755f722d67c53038e1"
+  revision = "ca85b5a307448462b0aa7a07c67c0846bc12568f"
 
 [[projects]]
   branch = "master"
   name = "github.com/mdlayher/netlink"
-  packages = [".","nlenc"]
-  revision = "756e798fb38fac19fb2234d3acc32e902bc1af44"
+  packages = [
+    ".",
+    "nlenc"
+  ]
+  revision = "80a6f93efd374ddee4e0ea862ca0085ef42eed65"
 
 [[projects]]
   branch = "master"
   name = "github.com/mdlayher/taskstats"
   packages = ["."]
-  revision = "872a891b4e08a229a241cec32cf206a77017303b"
+  revision = "2addfb90f49484c870cc4527322a9fda29b61c83"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["bpf"]
-  revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
+  revision = "aaf60122140d3fcf75376d319f0554393160eb50"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "83801418e1b59fb1880e363299581ee543af32ca"
+  revision = "1c9583448a9c3aa0f9a6a5241bf73c0bd8aafded"
 
 [solve-meta]
   analyzer-name = "dep"

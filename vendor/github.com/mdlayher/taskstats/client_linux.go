@@ -15,7 +15,8 @@ import (
 
 const (
 	// sizeofTaskstats is the size of a unix.Taskstats structure.
-	sizeofTaskstats = int(unsafe.Sizeof(unix.Taskstats{}))
+	sizeofTaskstats   = int(unsafe.Sizeof(unix.Taskstats{}))
+	sizeofCGroupStats = int(unsafe.Sizeof(unix.CGroupStats{}))
 )
 
 var _ osClient = &client{}
@@ -58,10 +59,19 @@ func (c *client) Close() error {
 
 // PID implements osClient.
 func (c *client) PID(pid int) (*Stats, error) {
-	// Query taskstats for information using a specific PID.
+	return c.getStats(pid, unix.TASKSTATS_CMD_ATTR_PID, unix.TASKSTATS_TYPE_AGGR_PID)
+}
+
+// TGID implements osClient.
+func (c *client) TGID(tgid int) (*Stats, error) {
+	return c.getStats(tgid, unix.TASKSTATS_CMD_ATTR_TGID, unix.TASKSTATS_TYPE_AGGR_TGID)
+}
+
+func (c *client) getStats(id int, cmdAttr, typeAggr uint16) (*Stats, error) {
+	// Query taskstats for information using a specific ID.
 	attrb, err := netlink.MarshalAttributes([]netlink.Attribute{{
-		Type: unix.TASKSTATS_CMD_ATTR_PID,
-		Data: nlenc.Uint32Bytes(uint32(pid)),
+		Type: cmdAttr,
+		Data: nlenc.Uint32Bytes(uint32(id)),
 	}})
 	if err != nil {
 		return nil, err
@@ -86,19 +96,87 @@ func (c *client) PID(pid int) (*Stats, error) {
 		return nil, fmt.Errorf("unexpected number of taskstats messages: %d", l)
 	}
 
-	return parseMessage(msgs[0])
+	return parseMessage(msgs[0], typeAggr)
 }
 
-// parseMessage attempts to parse a Stats structure from a generic netlink message.
-func parseMessage(m genetlink.Message) (*Stats, error) {
+// CGroupStats implements osClient.
+func (c *client) CGroupStats(path string) (*CGroupStats, error) {
+	// Open cgroup path so its file descriptor can be passed to taskstats.
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	// Query taskstats for cgroup information using the file descriptor.
+	attrb, err := netlink.MarshalAttributes([]netlink.Attribute{{
+		Type: unix.CGROUPSTATS_CMD_ATTR_FD,
+		Data: nlenc.Uint32Bytes(uint32(f.Fd())),
+	}})
+	if err != nil {
+		return nil, err
+	}
+
+	msg := genetlink.Message{
+		Header: genetlink.Header{
+			Command: unix.CGROUPSTATS_CMD_GET,
+			Version: unix.TASKSTATS_VERSION,
+		},
+		Data: attrb,
+	}
+
+	flags := netlink.HeaderFlagsRequest
+
+	msgs, err := c.c.Execute(msg, c.family.ID, flags)
+	if err != nil {
+		return nil, err
+	}
+
+	if l := len(msgs); l != 1 {
+		return nil, fmt.Errorf("unexpected number of cgroupstats messages: %d", l)
+	}
+
+	return parseCGroupMessage(msgs[0])
+}
+
+// parseCGroupMessage attempts to parse a CGroupStats structure from a generic netlink message.
+func parseCGroupMessage(m genetlink.Message) (*CGroupStats, error) {
 	attrs, err := netlink.UnmarshalAttributes(m.Data)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, a := range attrs {
-		// Only parse PID+stats structure.
-		if a.Type != unix.TASKSTATS_TYPE_AGGR_PID {
+		// Only parse cgroupstats structure.
+		if a.Type != unix.CGROUPSTATS_TYPE_CGROUP_STATS {
+			continue
+		}
+
+		// Verify that the byte slice containing a unix.CGroupStats is the
+		// size expected by this package, so we don't blindly cast the
+		// byte slice into a structure of the wrong size.
+		if want, got := sizeofCGroupStats, len(a.Data); want != got {
+			return nil, fmt.Errorf("unexpected cgroupstats structure size, want %d, got %d", want, got)
+		}
+
+		cs := *(*unix.CGroupStats)(unsafe.Pointer(&a.Data[0]))
+		return parseCGroupStats(cs)
+	}
+
+	// No taskstats response found.
+	return nil, os.ErrNotExist
+}
+
+// parseMessage attempts to parse a Stats structure from a generic netlink message.
+func parseMessage(m genetlink.Message, typeAggr uint16) (*Stats, error) {
+	attrs, err := netlink.UnmarshalAttributes(m.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, a := range attrs {
+		// Only parse ID+stats structure.
+		if a.Type != typeAggr {
 			continue
 		}
 
@@ -108,7 +186,7 @@ func parseMessage(m genetlink.Message) (*Stats, error) {
 		}
 
 		for _, na := range nattrs {
-			// Only parse Stats element since caller would already have PID.
+			// Only parse Stats element since caller would already have ID.
 			if na.Type != unix.TASKSTATS_TYPE_STATS {
 				continue
 			}
@@ -120,9 +198,7 @@ func parseMessage(m genetlink.Message) (*Stats, error) {
 				return nil, fmt.Errorf("unexpected taskstats structure size, want %d, got %d", want, got)
 			}
 
-			// TODO(mdlayher): parse raw unix.Taskstats structure into nicer structure.
-			stats := Stats(*(*unix.Taskstats)(unsafe.Pointer(&na.Data[0])))
-			return &stats, nil
+			return parseStats(*(*unix.Taskstats)(unsafe.Pointer(&na.Data[0])))
 		}
 	}
 

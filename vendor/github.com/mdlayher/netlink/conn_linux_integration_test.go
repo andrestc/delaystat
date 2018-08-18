@@ -53,7 +53,7 @@ func TestLinuxNetlinkSetBPF(t *testing.T) {
 	for _, s := range sequences {
 		req.Header.Sequence = s.seq
 		if _, err := c.Send(req); err != nil {
-			t.Fatalf("failed to send with sequence %d: %v", s, err)
+			t.Fatalf("failed to send with sequence %d: %v", s.seq, err)
 		}
 
 		if !s.ok {
@@ -74,6 +74,9 @@ func TestLinuxNetlinkSetBPF(t *testing.T) {
 			t.Fatalf("unexpected reply sequence number:\n- want: %v\n-  got: %v",
 				want, got)
 		}
+	}
+	if err := c.RemoveBPF(); err != nil {
+		t.Fatalf("failed to remove BPF filter: %v", err)
 	}
 }
 
