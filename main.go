@@ -9,8 +9,9 @@ import (
 )
 
 func main() {
-	var pid *int
-	pid = flag.Int("p", os.Getpid(), "Process ID to track delay stats")
+	var pid, tgid *int
+	pid = flag.Int("p", -1, "PID to track delay stats")
+	tgid = flag.Int("t", os.Getpid(), "TGID to track delay stats")
 	flag.Parse()
 
 	client, err := taskstats.New()
@@ -23,9 +24,18 @@ func main() {
 		}
 	}()
 
-	stats, err := client.PID(*pid)
+	var stats *taskstats.Stats
+	if *pid != -1 {
+		stats, err = client.PID(*pid)
+	} else {
+		stats, err = client.TGID(*tgid)
+	}
 	if err != nil {
 		log.Panic(err)
 	}
-	PrintStats(stats)
+
+	err = PrintStats(stats)
+	if err != nil {
+		log.Panic(err)
+	}
 }
