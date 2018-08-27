@@ -6,4 +6,5 @@ build:
 	go build -o delaystat
 
 run: build
-	sudo ./delaystat
+	sudo setcap cap_net_admin+ep ./delaystat
+	./delaystat
