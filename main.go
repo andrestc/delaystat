@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"text/tabwriter"
@@ -30,19 +31,25 @@ func main() {
 	}()
 
 	var stats, prevStats *taskstats.Stats
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', tabwriter.TabIndent)
+	fmt.Fprintln(w, "CPU\tI/O\tSwap\tMemory Reclaim")
+	if *pid != -1 {
+		fmt.Printf("PID [%v]\n", *pid)
+	} else {
+		fmt.Printf("TGID [%v]\n", *tgid)
+	}
 	for {
 		if *pid != -1 {
-			fmt.Printf("PID [%v]\n", *pid)
 			stats, err = client.PID(*pid)
 		} else {
-			fmt.Printf("TGID [%v]\n", *tgid)
 			stats, err = client.TGID(*tgid)
 		}
 		if err != nil {
 			log.Panic(err)
 		}
 
-		if err := PrintStats(stats, prevStats); err != nil {
+		PrintStats(w, stats, prevStats)
+		if err := w.Flush(); err != nil {
 			log.Panic(err)
 		}
 		prevStats = stats
@@ -55,7 +62,7 @@ func main() {
 
 }
 
-func PrintStats(stats *taskstats.Stats, lastStats *taskstats.Stats) error {
+func PrintStats(w io.Writer, stats *taskstats.Stats, lastStats *taskstats.Stats) {
 	diffStats := *stats
 	if lastStats != nil {
 		diffStats.CPUDelay -= lastStats.CPUDelay
@@ -67,8 +74,6 @@ func PrintStats(stats *taskstats.Stats, lastStats *taskstats.Stats) error {
 		diffStats.SwapInDelay -= lastStats.SwapInDelay
 		diffStats.SwapInDelayCount -= lastStats.SwapInDelayCount
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', tabwriter.TabIndent)
-	fmt.Fprintln(w, "CPU\tI/O\tSwap\tMemory Reclaim")
 	fmt.Fprintf(w, "%v (avg %v)\t%v (avg %v)\t%v (avg %v)\t%v (avg %v)\n",
 		diffStats.CPUDelay,
 		avgDuration(stats.CPUDelay.Nanoseconds(), int64(stats.CPUDelayCount)),
@@ -79,7 +84,6 @@ func PrintStats(stats *taskstats.Stats, lastStats *taskstats.Stats) error {
 		diffStats.FreePagesDelay,
 		avgDuration(stats.FreePagesDelay.Nanoseconds(), int64(stats.FreePagesDelayCount)),
 	)
-	return w.Flush()
 }
 
 func avgDuration(total, count int64) time.Duration {
