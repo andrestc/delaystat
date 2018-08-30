@@ -27,4 +27,4 @@ For more information on linux delay accounting, please see:
 
 ### Notes
 
- - Requires CAP_NET_RAW capability (see capabilities(7)). Otherwise, the application must be run as root.
+ - Requires CAP_NET_ADMIN capability (see capabilities(7)). Otherwise, the application must be run as root.
