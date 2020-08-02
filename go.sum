@@ -1,0 +1,14 @@
+github.com/google/go-cmp v0.5.1 h1:JFrFEBb2xKufg6XkJsJr+WbKb4FQlURi5RUcBveYu9k=
+github.com/google/go-cmp v0.5.1/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/mdlayher/genetlink v0.0.0-20180728170340-ca85b5a30744 h1:DIgwT/p+gZ3wI2gRCUJ26m58SlUUgGn4gpIaPmo9VXk=
+github.com/mdlayher/genetlink v0.0.0-20180728170340-ca85b5a30744/go.mod h1:EOrmeik1bDMaRduo2B+uAYe1HmTq6yF2IMDmJi1GoWk=
+github.com/mdlayher/netlink v0.0.0-20180810152804-80a6f93efd37 h1:+EP05XYFmNjgoxtPgsMOjJnH5MGHU9j3silZHucM07Y=
+github.com/mdlayher/netlink v0.0.0-20180810152804-80a6f93efd37/go.mod h1:a3TlQHkJH2m32RF224Z7LhD5N4mpyR8eUbCoYHywrwg=
+github.com/mdlayher/taskstats v0.0.0-20180815144054-2addfb90f494 h1:XVcAfIftdUGpdI0f1UmxGK7EHC+j9i3Ds1tTFaNI78s=
+github.com/mdlayher/taskstats v0.0.0-20180815144054-2addfb90f494/go.mod h1:MnJpzX3tKwNHx1lNjupG9azS8ji8YeSyuZzJX+ZaJ9o=
+golang.org/x/net v0.0.0-20180816102801-aaf60122140d h1:211XH5RPVP5tOBkz6xm3/b7KxtjqVf6PYG+evqJpE08=
+golang.org/x/net v0.0.0-20180816102801-aaf60122140d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
+golang.org/x/sys v0.0.0-20180816055513-1c9583448a9c h1:uHnKXcvx6SNkuwC+nrzxkJ+TpPwZOtumbhWrrOYN5YA=
+golang.org/x/sys v0.0.0-20180816055513-1c9583448a9c/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=
+golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
